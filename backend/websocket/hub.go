@@ -11,6 +11,7 @@ type Hub struct {
 	Register   chan *Client
 	Unregister chan *Client
 	Broadcast  chan *BroadcastMessage
+	BroadcastAll chan *WSMessage
 	mu         sync.RWMutex
 }
 
@@ -26,6 +27,7 @@ func NewHub() *Hub {
 		Register:   make(chan *Client),
 		Unregister: make(chan *Client),
 		Broadcast:  make(chan *BroadcastMessage),
+		BroadcastAll: make(chan *WSMessage),
 	}
 }
 
@@ -64,6 +66,22 @@ func (h *Hub) Run() {
 				}
 				select {
 				case client.Send <- msg.Message:
+				default:
+					h.LeaveRoom(client.PointCloudID, client)
+				}
+			}
+		case msg := <-h.BroadcastAll:
+			h.mu.RLock()
+			allClients := make([]*Client, 0)
+			for _, room := range h.Rooms {
+				for client := range room {
+					allClients = append(allClients, client)
+				}
+			}
+			h.mu.RUnlock()
+			for _, client := range allClients {
+				select {
+				case client.Send <- msg:
 				default:
 					h.LeaveRoom(client.PointCloudID, client)
 				}

@@ -14,7 +14,7 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB, hub *websocket.Hub) {
 	pointCloudHandler := handlers.NewPointCloudHandler(pointCloudService)
 
 	labelService := services.NewTerrainLabelService(db)
-	labelHandler := handlers.NewLabelHandler(labelService)
+	labelHandler := handlers.NewLabelHandler(labelService, hub)
 
 	annotationService := services.NewAnnotationService(db)
 	annotationHandler := handlers.NewAnnotationHandler(annotationService)

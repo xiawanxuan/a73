@@ -35,6 +35,61 @@ export const useAnnotationStore = defineStore('annotation', () => {
     }
   }
 
+  async function createLabel(data: { name: string; color: string; description: string; icon: string }) {
+    const newLabel = await labelApi.create(data)
+    labels.value.push(newLabel)
+    if (!currentLabelId.value) {
+      currentLabelId.value = newLabel.id
+    }
+    return newLabel
+  }
+
+  async function updateLabel(id: string, data: Partial<TerrainLabel>) {
+    const updated = await labelApi.update(id, data)
+    const idx = labels.value.findIndex(l => l.id === id)
+    if (idx !== -1) {
+      labels.value[idx] = updated
+    }
+    annotations.value.forEach((ann, i) => {
+      if (ann.labelId === id) {
+        annotations.value[i] = { ...ann, label: updated }
+      }
+    })
+    return updated
+  }
+
+  async function deleteLabel(id: string) {
+    await labelApi.remove(id)
+    labels.value = labels.value.filter(l => l.id !== id)
+    if (currentLabelId.value === id && labels.value.length > 0) {
+      currentLabelId.value = labels.value[0].id
+    }
+  }
+
+  function addLabelFromRemote(label: TerrainLabel) {
+    if (labels.value.find(l => l.id === label.id)) return
+    labels.value.push(label)
+  }
+
+  function updateLabelFromRemote(label: TerrainLabel) {
+    const idx = labels.value.findIndex(l => l.id === label.id)
+    if (idx !== -1) {
+      labels.value[idx] = label
+    }
+    annotations.value.forEach((ann, i) => {
+      if (ann.labelId === label.id) {
+        annotations.value[i] = { ...ann, label }
+      }
+    })
+  }
+
+  function deleteLabelFromRemote(id: string) {
+    labels.value = labels.value.filter(l => l.id !== id)
+    if (currentLabelId.value === id && labels.value.length > 0) {
+      currentLabelId.value = labels.value[0].id
+    }
+  }
+
   async function fetchByPointCloud(pointCloudId: string) {
     loading.value = true
     try {
@@ -131,6 +186,12 @@ export const useAnnotationStore = defineStore('annotation', () => {
     searchKeyword,
     filteredAnnotations,
     fetchLabels,
+    createLabel,
+    updateLabel,
+    deleteLabel,
+    addLabelFromRemote,
+    updateLabelFromRemote,
+    deleteLabelFromRemote,
     fetchByPointCloud,
     createAnnotation,
     updateAnnotation,

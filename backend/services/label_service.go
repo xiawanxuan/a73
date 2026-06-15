@@ -31,9 +31,13 @@ func NewTerrainLabelService(db *gorm.DB) *TerrainLabelService {
 	return &TerrainLabelService{DB: db}
 }
 
-func (s *TerrainLabelService) List() ([]models.TerrainLabel, error) {
+func (s *TerrainLabelService) List(userID *uuid.UUID) ([]models.TerrainLabel, error) {
 	var list []models.TerrainLabel
-	if err := s.DB.Find(&list).Error; err != nil {
+	query := s.DB.Where("is_system = ?", true)
+	if userID != nil && *userID != uuid.Nil {
+		query = query.Or("user_id = ?", *userID)
+	}
+	if err := query.Order("is_system DESC, created_at ASC").Find(&list).Error; err != nil {
 		return nil, err
 	}
 	return list, nil
@@ -50,12 +54,24 @@ func (s *TerrainLabelService) GetByID(id uuid.UUID) (*models.TerrainLabel, error
 	return &label, nil
 }
 
-func (s *TerrainLabelService) Create(dto *CreateTerrainLabelDTO) (*models.TerrainLabel, error) {
+func (s *TerrainLabelService) Create(userID uuid.UUID, dto *CreateTerrainLabelDTO) (*models.TerrainLabel, error) {
+	var existing int64
+	s.DB.Model(&models.TerrainLabel{}).
+		Where("name = ? AND user_id = ?", dto.Name, userID).
+		Where("deleted_at IS NULL").
+		Count(&existing)
+	if existing > 0 {
+		return nil, errors.New("label name already exists for this user")
+	}
+
+	uid := userID
 	label := &models.TerrainLabel{
+		UserID:      &uid,
 		Name:        dto.Name,
 		Color:       dto.Color,
 		Description: dto.Description,
 		Icon:        dto.Icon,
+		IsSystem:    false,
 	}
 
 	if err := s.DB.Create(label).Error; err != nil {
@@ -65,10 +81,17 @@ func (s *TerrainLabelService) Create(dto *CreateTerrainLabelDTO) (*models.Terrai
 	return s.GetByID(label.ID)
 }
 
-func (s *TerrainLabelService) Update(id uuid.UUID, dto *UpdateTerrainLabelDTO) (*models.TerrainLabel, error) {
+func (s *TerrainLabelService) Update(id uuid.UUID, userID uuid.UUID, dto *UpdateTerrainLabelDTO) (*models.TerrainLabel, error) {
 	label, err := s.GetByID(id)
 	if err != nil {
 		return nil, err
+	}
+
+	if label.IsSystem {
+		return nil, errors.New("cannot modify system label")
+	}
+	if label.UserID == nil || *label.UserID != userID {
+		return nil, errors.New("permission denied: label does not belong to user")
 	}
 
 	label.Name = dto.Name
@@ -83,8 +106,28 @@ func (s *TerrainLabelService) Update(id uuid.UUID, dto *UpdateTerrainLabelDTO) (
 	return s.GetByID(id)
 }
 
-func (s *TerrainLabelService) Delete(id uuid.UUID) error {
-	result := s.DB.Delete(&models.TerrainLabel{}, "id = ?", id)
+func (s *TerrainLabelService) Delete(id uuid.UUID, userID uuid.UUID) error {
+	label, err := s.GetByID(id)
+	if err != nil {
+		return err
+	}
+
+	if label.IsSystem {
+		return errors.New("cannot delete system label")
+	}
+	if label.UserID == nil || *label.UserID != userID {
+		return errors.New("permission denied: label does not belong to user")
+	}
+
+	var annotationCount int64
+	s.DB.Model(&models.Annotation{}).
+		Where("label_id = ?", id).
+		Count(&annotationCount)
+	if annotationCount > 0 {
+		return errors.New("cannot delete label: it is used by annotations")
+	}
+
+	result := s.DB.Delete(label)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -92,4 +135,12 @@ func (s *TerrainLabelService) Delete(id uuid.UUID) error {
 		return errors.New("terrain label not found")
 	}
 	return nil
+}
+
+func (s *TerrainLabelService) IsSystemLabel(id uuid.UUID) (bool, error) {
+	label, err := s.GetByID(id)
+	if err != nil {
+		return false, err
+	}
+	return label.IsSystem, nil
 }

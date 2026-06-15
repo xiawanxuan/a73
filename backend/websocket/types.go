@@ -7,6 +7,9 @@ const (
 	MsgTypeAnnotationUpdate   = "annotation_update"
 	MsgTypeAnnotationDelete   = "annotation_delete"
 	MsgTypeAnnotationRollback = "annotation_rollback"
+	MsgTypeLabelCreate        = "label_create"
+	MsgTypeLabelUpdate        = "label_update"
+	MsgTypeLabelDelete        = "label_delete"
 	MsgTypeUserJoin           = "user_join"
 	MsgTypeUserLeave          = "user_leave"
 	MsgTypeOnlineUsers        = "online_users"
@@ -51,6 +54,12 @@ type DraftData struct {
 	UserID       string `json:"userId"`
 	PointCloudID string `json:"pointCloudId"`
 	Data         string `json:"data"`
+}
+
+type LabelData struct {
+	LabelID string `json:"labelId"`
+	UserID  string `json:"userId,omitempty"`
+	Payload any    `json:"payload"`
 }
 
 type OnlineUsersData struct {

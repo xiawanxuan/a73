@@ -31,7 +31,8 @@ export interface TerrainLabel {
   name: string
   color: string
   description: string
-  icon?: string
+  icon: string
+  isSystem: boolean
   createdAt: string
   updatedAt: string
 }
