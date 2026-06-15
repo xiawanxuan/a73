@@ -431,12 +431,32 @@ const updateDrawingPolygon = () => {
     currentPolygonLine.value = line
 
     if (points.length >= 3) {
-      const fillShape = new THREE.Shape()
-      fillShape.moveTo(points[0].x, points[0].y)
-      for (let i = 1; i < points.length; i++) {
-        fillShape.lineTo(points[i].x, points[i].y)
+      const n = points.length
+      const triCount = n - 2
+      const fillPositions = new Float32Array(triCount * 9)
+      const fillIndices = new Uint32Array(triCount * 3)
+
+      let vi = 0
+      let ii = 0
+      for (let t = 0; t < triCount; t++) {
+        const i0 = 0
+        const i1 = t + 1
+        const i2 = t + 2
+        const p0 = points[i0]
+        const p1 = points[i1]
+        const p2 = points[i2]
+        fillPositions[vi++] = p0.x; fillPositions[vi++] = p0.y; fillPositions[vi++] = p0.z
+        fillPositions[vi++] = p1.x; fillPositions[vi++] = p1.y; fillPositions[vi++] = p1.z
+        fillPositions[vi++] = p2.x; fillPositions[vi++] = p2.y; fillPositions[vi++] = p2.z
+        fillIndices[ii++] = t * 3
+        fillIndices[ii++] = t * 3 + 1
+        fillIndices[ii++] = t * 3 + 2
       }
-      const fillGeo = new THREE.ShapeGeometry(fillShape)
+
+      const fillGeo = new THREE.BufferGeometry()
+      fillGeo.setAttribute('position', new THREE.BufferAttribute(fillPositions, 3))
+      fillGeo.setIndex(new THREE.BufferAttribute(fillIndices, 1))
+      fillGeo.computeVertexNormals()
       const fillMat = new THREE.MeshBasicMaterial({
         color: 0x00ff00,
         transparent: true,
@@ -444,7 +464,6 @@ const updateDrawingPolygon = () => {
         side: THREE.DoubleSide
       })
       const fillMesh = new THREE.Mesh(fillGeo, fillMat)
-      fillMesh.position.z = points[0].z
       drawingGroup.value.add(fillMesh)
       currentPolygonFill.value = fillMesh
     }
@@ -483,12 +502,32 @@ const addAnnotationPolygon = (annotation: Annotation) => {
     annotationGroup.value.add(sphere)
   }
 
-  const fillShape = new THREE.Shape()
-  fillShape.moveTo(points[0].x, points[0].y)
-  for (let i = 1; i < points.length; i++) {
-    fillShape.lineTo(points[i].x, points[i].y)
+  const n = points.length
+  const triCount = n - 2
+  const fillPositions = new Float32Array(triCount * 9)
+  const fillIndices = new Uint32Array(triCount * 3)
+
+  let vi = 0
+  let ii = 0
+  for (let t = 0; t < triCount; t++) {
+    const i0 = 0
+    const i1 = t + 1
+    const i2 = t + 2
+    const p0 = points[i0]
+    const p1 = points[i1]
+    const p2 = points[i2]
+    fillPositions[vi++] = p0.x; fillPositions[vi++] = p0.y; fillPositions[vi++] = p0.z
+    fillPositions[vi++] = p1.x; fillPositions[vi++] = p1.y; fillPositions[vi++] = p1.z
+    fillPositions[vi++] = p2.x; fillPositions[vi++] = p2.y; fillPositions[vi++] = p2.z
+    fillIndices[ii++] = t * 3
+    fillIndices[ii++] = t * 3 + 1
+    fillIndices[ii++] = t * 3 + 2
   }
-  const fillGeo = new THREE.ShapeGeometry(fillShape)
+
+  const fillGeo = new THREE.BufferGeometry()
+  fillGeo.setAttribute('position', new THREE.BufferAttribute(fillPositions, 3))
+  fillGeo.setIndex(new THREE.BufferAttribute(fillIndices, 1))
+  fillGeo.computeVertexNormals()
   const fillMat = new THREE.MeshBasicMaterial({
     color: threeColor,
     transparent: true,
@@ -496,7 +535,6 @@ const addAnnotationPolygon = (annotation: Annotation) => {
     side: THREE.DoubleSide
   })
   const fillMesh = new THREE.Mesh(fillGeo, fillMat)
-  fillMesh.position.z = points[0].z
   fillMesh.userData = { annotationId: annotation.id }
   annotationGroup.value.add(fillMesh)
 }
