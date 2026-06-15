@@ -22,6 +22,16 @@ env/
 __pycache__/
 *.pyc
 
+# Go
+vendor/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
 # IDE
 .idea/
 .vscode/
@@ -32,3 +42,12 @@ __pycache__/
 # Env
 .env
 .env.local
+
+# Point cloud data files
+*.las
+*.laz
+*.ply
+*.pcd
+*.xyz
+data/
+uploads/

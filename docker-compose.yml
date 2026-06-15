@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgis/postgis:15-3.4
+    container_name: ocean-survey-postgres
+    environment:
+      POSTGRES_USER: ocean
+      POSTGRES_PASSWORD: ocean_survey_2024
+      POSTGRES_DB: ocean_survey
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/migrations:/docker-entrypoint-initdb.d
+    networks:
+      - ocean-survey-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: ocean-survey-redis
+    command: redis-server --requirepass ocean_survey_redis_2024 --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - ocean-survey-net
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  ocean-survey-net:
+    driver: bridge
